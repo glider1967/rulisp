@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 (macro (test body)
                     ('if test
                         body
-                        'NIL
+                        'K
                     )
                 )
             )

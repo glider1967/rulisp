@@ -209,12 +209,11 @@ fn eval_call(
                 ));
             }
 
-            let mut new_env = Rc::new(RefCell::new(Env::extend(env.clone())));
             for (i, param) in params.iter().enumerate() {
                 let val = list[i + 1].clone();
-                new_env.borrow_mut().set_object(param, val);
+                env.borrow_mut().set_object(param, val);
             }
-            let expand = eval_object(&Object::List(body), &mut new_env)?;
+            let expand = eval_object(&Object::List(body), env)?;
             eval_object(&expand, env)
         }
         _ => Err(format!("Not a lambda: {}", name)),
