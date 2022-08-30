@@ -187,30 +187,45 @@ fn eval_call(
 
     match func {
         Object::Lambda(params, body) => {
-            if params.len() != list.len() - 1 {
-                return Err(format!(
-                    "Invalid call of function `{}`: number of arguments is not correct",
-                    name
-                ));
-            }
-
             let mut new_env = Rc::new(RefCell::new(Env::extend(env.clone())));
             for (i, param) in params.iter().enumerate() {
-                let val = eval_object(&list[i + 1], env)?;
+                if param == "&rest" {
+                    let mut rest = VecDeque::new();
+                    for j in (i + 1)..list.len() {
+                        let val = eval_object(&list[j], env)?;
+                        rest.push_back(val);
+                    }
+                    new_env
+                        .borrow_mut()
+                        .set_object(&params[i + 1], Object::List(rest));
+                    break;
+                }
+
+                let g = list
+                    .get(i + 1)
+                    .ok_or("Invalid lambda: number of arguments is not enough".to_string())?;
+                let val = eval_object(g, env)?;
                 new_env.borrow_mut().set_object(param, val);
             }
             eval_object(&Object::List(body), &mut new_env)
         }
         Object::Macro(params, body) => {
-            if params.len() != list.len() - 1 {
-                return Err(format!(
-                    "Invalid call of macro `{}`: number of arguments is not correct",
-                    name
-                ));
-            }
-
             for (i, param) in params.iter().enumerate() {
-                let val = list[i + 1].clone();
+                if param == "&rest" {
+                    let mut rest = VecDeque::new();
+                    for j in (i + 1)..list.len() {
+                        let val = list[j].clone();
+                        rest.push_back(val);
+                    }
+                    env.borrow_mut()
+                        .set_object(&params[i + 1], Object::List(rest));
+                    break;
+                }
+
+                let g = list
+                    .get(i + 1)
+                    .ok_or("Invalid macro: number of arguments is not enough".to_string())?;
+                let val = g.clone();
                 env.borrow_mut().set_object(param, val);
             }
             let expand = eval_object(&Object::List(body), env)?;

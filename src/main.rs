@@ -21,6 +21,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     )
                 )
             )
+            (define g
+                (lambda (a &rest x) (progn x)))
             (define K 7)
             (define mulK
                 (lambda (x)
@@ -30,15 +32,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     )
                 )
             )
-            (define cond
-                (macro (test body)
-                    ('if test
-                        body
-                        'K
+            (define defun
+                (macro (name params &rest body)
+                    ('define name
+                        ('lambda params
+                            ('progn body)
+                        )
                     )
                 )
             )
-            (cond (> 5 7) 3)
+            (g 'a 'b 'c)
         )";
 
     let val = eval(program, &mut env)?;
