@@ -10,6 +10,7 @@ pub enum Object {
     Bool(bool),
     Symbol(String),
     Lambda(Vec<String>, VecDeque<Object>),
+    Macro(Vec<String>, VecDeque<Object>),
     List(VecDeque<Object>),
 }
 
@@ -22,6 +23,17 @@ impl fmt::Display for Object {
             Object::Symbol(s) => write!(f, "{}", s),
             Object::Lambda(params, body) => {
                 write!(f, "Lambda(")?;
+                for param in params {
+                    write!(f, "{} ", param)?;
+                }
+                write!(f, ")")?;
+                for expr in body {
+                    write!(f, " {}", expr)?;
+                }
+                Ok(())
+            }
+            Object::Macro(params, body) => {
+                write!(f, "Macro(")?;
                 for param in params {
                     write!(f, "{} ", param)?;
                 }

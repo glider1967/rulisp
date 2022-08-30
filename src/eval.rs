@@ -145,7 +145,34 @@ fn eval_lambda(list: &VecDeque<Object>) -> Result<Object, String> {
     Ok(Object::Lambda(params, body))
 }
 
-fn eval_func_call(
+fn eval_macro(list: &VecDeque<Object>) -> Result<Object, String> {
+    if list.len() != 3 {
+        return Err("Invalid number of arguments for macro statement".to_string());
+    };
+
+    let params = match &list[1] {
+        Object::List(list) => {
+            let mut params = vec![];
+            for param in list {
+                match param {
+                    Object::Symbol(s) => params.push(s.clone()),
+                    _ => return Err("Invalid lambda parameter: not symbol".to_string()),
+                }
+            }
+            params
+        }
+        _ => return Err("Invalid lambda: first argument is not list".to_string()),
+    };
+
+    let body = match &list[2] {
+        Object::List(list) => list.clone(),
+        _ => return Err("Invalid lambda: body is not list".to_string()),
+    };
+
+    Ok(Object::Macro(params, body))
+}
+
+fn eval_call(
     name: &str,
     list: &VecDeque<Object>,
     env: &mut Rc<RefCell<Env>>,
@@ -173,6 +200,22 @@ fn eval_func_call(
                 new_env.borrow_mut().set_object(param, val);
             }
             eval_object(&Object::List(body), &mut new_env)
+        }
+        Object::Macro(params, body) => {
+            if params.len() != list.len() - 1 {
+                return Err(format!(
+                    "Invalid call of macro `{}`: number of arguments is not correct",
+                    name
+                ));
+            }
+
+            let mut new_env = Rc::new(RefCell::new(Env::extend(env.clone())));
+            for (i, param) in params.iter().enumerate() {
+                let val = list[i + 1].clone();
+                new_env.borrow_mut().set_object(param, val);
+            }
+            let expand = eval_object(&Object::List(body), &mut new_env)?;
+            eval_object(&expand, env)
         }
         _ => Err(format!("Not a lambda: {}", name)),
     }
@@ -290,13 +333,14 @@ fn eval_list(list: &VecDeque<Object>, env: &mut Rc<RefCell<Env>>) -> Result<Obje
             "define" => eval_define(&list, env),
             "if" => eval_if(&list, env),
             "lambda" => eval_lambda(&list),
+            "macro" => eval_macro(&list),
             "atom" => eval_atom(&list, env),
             "quote" => eval_quote(&list),
             "cons" => eval_cons(&list, env),
             "car" => eval_car(&list, env),
             "cdr" => eval_cdr(&list, env),
             "progn" => eval_progn(&list, env),
-            _ => eval_func_call(&s, &list, env),
+            _ => eval_call(&s, &list, env),
         },
         _ => {
             let mut new_list = VecDeque::new();
@@ -319,6 +363,7 @@ fn eval_object(obj: &Object, env: &mut Rc<RefCell<Env>>) -> Result<Object, Strin
         Object::Bool(b) => Ok(Object::Bool(*b)),
         Object::Symbol(name) => eval_symbol(name, env),
         Object::Lambda(_, _) => Ok(Object::Nil),
+        Object::Macro(_, _) => Ok(Object::Nil),
         Object::List(list) => eval_list(list, env),
     }
 }

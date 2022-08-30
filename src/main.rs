@@ -30,7 +30,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                     )
                 )
             )
-            (map mulK '(2 7 8))
+            (define cond
+                (macro (test body)
+                    ('if test
+                        body
+                        'NIL
+                    )
+                )
+            )
+            (cond (> 5 7) 3)
         )";
 
     let val = eval(program, &mut env)?;
@@ -41,6 +49,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         Object::Symbol(s) => println!("{}", s),
         Object::Lambda(params, body) => {
             println!("Lambda(");
+            for param in params {
+                print!("{} ", param);
+            }
+            println!(")");
+            for expr in body {
+                println!("  {}", expr);
+            }
+        }
+        Object::Macro(params, body) => {
+            println!("Macro(");
             for param in params {
                 print!("{} ", param);
             }
